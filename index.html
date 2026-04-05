@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anton's Social Psychology Survey</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f3f3;
+      color: #222;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    h1, h2, p {
+      margin-top: 0;
+    }
+
+    #faceImg {
+      width: 375px;
+      height: 500px;
+      object-fit: cover;
+      margin: 16px 0;
+      border-radius: 8px;
+      background: #ddd;
+      max-width: 100%;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .scale {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+
+    .scale button,
+    .primary-btn {
+      padding: 10px 14px;
+      font-size: 16px;
+      border: 1px solid #bbb;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+    }
+
+    .scale button:hover,
+    .primary-btn:hover {
+      background: #f0f0f0;
+    }
+
+    .small {
+      color: #555;
+      font-size: 14px;
+    }
+
+    #progress {
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .field-block {
+      margin: 20px 0;
+    }
+
+    select {
+      padding: 8px;
+      font-size: 16px;
+      margin: 6px 0;
+      width: 80%;
+      max-width: 320px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="intro">
+      <h1>Anton's Social Psychology Survey</h1>
+      <p>Thank you for participating.</p>
+      <p><strong>Time:</strong> about 2–3 minutes</p>
+      <p class="small">Please complete the survey only once.</p>
+
+      <div class="field-block">
+        <select id="ageGroup" required>
+          <option value="">Age</option>
+          <option value="Under 21">Under 21</option>
+          <option value="21 or older">21 or older</option>
+        </select>
+        <br />
+        <select id="gender" required>
+          <option value="">Gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <button class="primary-btn" id="startBtn">Start</button>
+    </div>
+
+    <div id="study" class="hidden">
+      <div id="progress"></div>
+      <div id="prompt"></div>
+      <img id="faceImg" src="" alt="Face" />
+      <div class="scale" id="scale"></div>
+      <div class="small">1 = strongly disagree, 7 = strongly agree</div>
+    </div>
+
+    <div id="done" class="hidden">
+      <h2>Thank you</h2>
+      <p>Your response has been recorded.</p>
+      <p class="small">Thanks for participating in Anton's Social Psychology Survey.</p>
+    </div>
+  </div>
+
+  <script>
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwI33-d3-_7iWSXMvrf8E0zPfXpk2FGaoBZkntZ9TQ6cYRtLRJLCLV8eSs33h_PEpm3/exec";
+
+    const faceFiles = [
+      "faces/f001.jpeg",
+      "faces/f002.jpeg",
+      "faces/f003.jpeg",
+      "faces/f004.jpeg",
+      "faces/f005.jpeg",
+      "faces/f006.jpeg",
+      "faces/f007.jpeg",
+      "faces/f008.jpeg",
+      "faces/f009.jpeg",
+      "faces/f010.jpeg",
+      "faces/m001.jpeg",
+      "faces/m002.jpeg",
+      "faces/m003.jpeg",
+      "faces/m004.jpeg",
+      "faces/m005.jpeg",
+      "faces/m006.jpeg",
+      "faces/m007.jpeg",
+      "faces/m008.jpeg",
+      "faces/m009.jpeg",
+      "faces/m010.jpeg"
+    ];
+
+    const fillerPrompts = [
+      "This person seems intelligent.",
+      "This person seems confident.",
+      "This person seems friendly.",
+      "This person seems kind.",
+      "This person seems interesting."
+    ];
+
+    const finalPrompt = "This person seems likeable.";
+
+    const repeatedCount = 5;
+    const singleExposureCount = 15;
+    const finalComparisonCount = 4;
+
+    let ageGroup = "";
+    let gender = "";
+
+    function shuffle(array) {
+      const a = [...array];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function randomId() {
+      return "id_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    function getDeviceId() {
+      const storageKey = "anton_social_psych_device_id";
+      let existingId = localStorage.getItem(storageKey);
+
+      if (!existingId) {
+        existingId = randomId();
+        localStorage.setItem(storageKey, existingId);
+      }
+
+      return existingId;
+    }
+
+    function makeScale(onClick) {
+      const scale = document.getElementById("scale");
+      scale.innerHTML = "";
+
+      for (let i = 1; i <= 7; i++) {
+        const btn = document.createElement("button");
+        btn.textContent = i;
+        btn.addEventListener("click", () => onClick(i));
+        scale.appendChild(btn);
+      }
+    }
+
+    const participantId = randomId();
+    const deviceId = getDeviceId();
+
+    const shuffledFaces = shuffle(faceFiles);
+    const repeatedFace = shuffledFaces[0];
+    const singleExposureFaces = shuffledFaces.slice(1, 1 + singleExposureCount);
+
+    let exposureTrials = [];
+
+    for (let i = 0; i < repeatedCount; i++) {
+      exposureTrials.push({
+        phase: "exposure",
+        face: repeatedFace,
+        prompt: fillerPrompts[i % fillerPrompts.length],
+        repeated: true
+      });
+    }
+
+    singleExposureFaces.forEach((face, index) => {
+      exposureTrials.push({
+        phase: "exposure",
+        face: face,
+        prompt: fillerPrompts[(index + repeatedCount) % fillerPrompts.length],
+        repeated: false
+      });
+    });
+
+    exposureTrials = shuffle(exposureTrials);
+
+    const finalComparisonFaces = shuffle(singleExposureFaces).slice(0, finalComparisonCount);
+
+    const finalTrials = shuffle([
+      {
+        phase: "final",
+        face: repeatedFace,
+        prompt: finalPrompt,
+        repeated: true
+      },
+      ...finalComparisonFaces.map(face => ({
+        phase: "final",
+        face: face,
+        prompt: finalPrompt,
+        repeated: false
+      }))
+    ]);
+
+    const allTrials = [...exposureTrials, ...finalTrials];
+    const responses = [];
+    let trialIndex = 0;
+
+    const introEl = document.getElementById("intro");
+    const studyEl = document.getElementById("study");
+    const doneEl = document.getElementById("done");
+    const progressEl = document.getElementById("progress");
+    const promptEl = document.getElementById("prompt");
+    const faceImgEl = document.getElementById("faceImg");
+
+    function renderTrial() {
+      const trial = allTrials[trialIndex];
+      progressEl.textContent = `Question ${trialIndex + 1} of ${allTrials.length}`;
+      promptEl.innerHTML = `<h2>${trial.prompt}</h2>`;
+      faceImgEl.src = trial.face;
+
+      makeScale((rating) => {
+        responses.push({
+          participantId: participantId,
+          deviceId: deviceId,
+          ageGroup: ageGroup,
+          gender: gender,
+          timestamp: new Date().toISOString(),
+          trialNumber: trialIndex + 1,
+          phase: trial.phase,
+          face: trial.face,
+          prompt: trial.prompt,
+          rating: rating,
+          repeatedFace: repeatedFace,
+          isRepeatedFace: trial.face === repeatedFace ? "yes" : "no"
+        });
+
+        trialIndex++;
+
+        if (trialIndex < allTrials.length) {
+          renderTrial();
+        } else {
+          finishStudy();
+        }
+      });
+    }
+
+    async function finishStudy() {
+      studyEl.classList.add("hidden");
+      doneEl.classList.remove("hidden");
+
+      const payload = {
+        participantId: participantId,
+        deviceId: deviceId,
+        ageGroup: ageGroup,
+        gender: gender,
+        repeatedFace: repeatedFace,
+        submittedAt: new Date().toISOString(),
+        responses: responses
+      };
+
+      try {
+        await fetch(APPS_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          body: JSON.stringify(payload)
+        });
+      } catch (error) {
+        console.error("Submission error:", error);
+      }
+    }
+
+    document.getElementById("startBtn").addEventListener("click", () => {
+      ageGroup = document.getElementById("ageGroup").value;
+      gender = document.getElementById("gender").value;
+
+      if (!ageGroup || !gender) {
+        alert("Please select age and gender.");
+        return;
+      }
+
+      introEl.classList.add("hidden");
+      studyEl.classList.remove("hidden");
+      renderTrial();
+    });
+  </script>
+</body>
+</html>
